@@ -1,3 +1,25 @@
+/*
+ * qualy.c by Gonzalo Gasca -- 2013-06-01 -- v.1.0
+ *
+ * Copyright (c) 2013 Gonzalo Gasca
+ *
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
 #include <pcap.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,9 +85,7 @@
 #define PT_MPV          32      /* RFC 2250 */
 #define PT_MP2T         33      /* RFC 2250 */
 #define PT_H263         34      /* from Chunrong Zhu of Intel; see the Web page */
-#define PT_H2641         96      /* Video*/
-#define PT_H2642         112
-#define PT_H2643         126
+#define PT_H264        112      /* Video*/
 
 void process_packet(u_char *, const struct pcap_pkthdr *, const u_char *);
 void print_ip_header(const u_char * , int );
@@ -505,8 +525,7 @@ udp[1] & 1 != 1 && udp[3] & 1 != 1 && udp[8] & 0x80 == 0x80 && length < 250
   fprintf(logfile , "   |-Sequence Number  : %d\n" , ntohs(rtphdr->seq));
   fprintf(logfile , "   |-RTP timestamp    : %d\n" , ntohl(rtphdr->ts));
   fprintf(logfile , "   |-RTP SSRC         : %08X\n" , ntohl(rtphdr->ssrc));
-  fprintf(logfile , "   |-RTP Payload      : %01x \\(%s\\)\n" ,rtphdr->pt, print_payload(rtphdr->pt));
-
+  fprintf(logfile , "   |-RTP Payload      : %s - %i \n" , print_payload(rtphdr->pt),rtphdr->pt);
   
   if (rtphdr->m == 1) {
     fprintf(logfile , "   |-RTP Marker bit   : %01X\n" , (rtphdr->m));
@@ -571,14 +590,21 @@ const value_string rtp_payload_type_short_vals[] =
   { PT_MPV,       "MPEG-I/II Video"},
   { PT_MP2T,      "MPEG-II streams"},
   { PT_H263,      "h263" },
-  { PT_H2641,      "h264" },
-  { PT_H2642,      "h264" },
-  { PT_H2643,      "h264" },
+  { PT_H264,      "h264" },
   { 0,            NULL },
 };
 
+if (payloadtype >= 96) {
+  return "DynamicRTP";
+}
+
 result = rtp_payload_type_short_vals[payloadtype];
-return result.str;
+
+if (result.str!=NULL) {
+  return result.str;
+}
+
+return "Unrecognized Payload type";
 
 }
 
