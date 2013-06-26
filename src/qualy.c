@@ -43,13 +43,15 @@
    +44 1865 273838
    gonzalo.gasca.meza@cs.ox.ac.uk
 
-   Open packet capture using libpcap library in order to analyze
-   RTP streams in detail.
-   Analyze H.264 streams
-   Convert RTP H.264 stream to video 
-   Generate Report
+   Open packet capture using libpcap library in order to analyze:
+   - Analyze RTP streams in detail (packet loss, jitter, latency)
+   - Analyze RTCP traffic
+   - Analyze H.264 streams
+   - Analyze DTLS negotiation
+   - Analyze TIP  negotiation
+   - Convert RTP H.264 stream to video 
+   - Generate Report
 */
-
 
 // tcpdump -qns 0 -X -r <filename.pcap>
 
@@ -304,9 +306,7 @@ void print_udp_packet(const u_char *Buffer , int Size) {
     struct udphdr *udph = (struct udphdr*)(Buffer + iphdrlen  + sizeof(struct ethhdr));
     int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof udph;
      
-
-    
-    
+     
     /*Verify if UDP packet is RTP packet and print it*/
     if (dissect_rtp(Buffer,Size) == 1) {
       print_rtp_packet(Buffer,Size);
@@ -523,7 +523,7 @@ udp[1] & 1 != 1 && udp[3] & 1 != 1 && udp[8] & 0x80 == 0x80 && length < 250
   fprintf(logfile , "\nRTP Header\n");
   fprintf(logfile , "   |-RTP Version      : %01x\n" , (rtphdr->v));
   fprintf(logfile , "   |-Sequence Number  : %d\n" , ntohs(rtphdr->seq));
-  fprintf(logfile , "   |-RTP timestamp    : %d\n" , ntohl(rtphdr->ts));
+  fprintf(logfile , "   |-RTP timestamp    : %u\n" , ntohl(rtphdr->ts));
   fprintf(logfile , "   |-RTP SSRC         : %08X\n" , ntohl(rtphdr->ssrc));
   fprintf(logfile , "   |-RTP Payload      : %s - %i \n" , print_payload(rtphdr->pt),rtphdr->pt);
   
