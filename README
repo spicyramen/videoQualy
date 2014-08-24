@@ -1,3 +1,9 @@
+Generate Report for Media and Call signalling packets:
+
+SIP TCP/UDP/WS
+BFCP
+RTP
+
 Compile in Ubuntu 12.04LTS 
 sudo gcc -std=gnu99 qualy.c -o qualyapp -lpcap
     
