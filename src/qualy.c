@@ -1,7 +1,8 @@
 /*
- * qualy.c by Gonzalo Gasca -- 2013-06-01 -- v.1.0
+ * qualy.c 2014-08-24 -- v.0.2
  *
- * Copyright (c) 2013 Gonzalo Gasca
+ * Copyright (c) 2013 Gonzalo Gasca Meza
+ *
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -18,6 +19,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
+ * 2014/08/24 Add Websockets support
+ *  
+    Compiled in Ubuntu 12.04LTS 
+    sudo gcc -std=gnu99 qualy.c -o qualyapp -lpcap
+    
+    Run
+    ./qualyapp filename.pcap
+
+    Capture packets:
+    tcpdump -qns 0 -X -r <filename.pcap>
+
  */
 
 #include <pcap.h>
@@ -26,7 +38,6 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
-
 #include <sys/socket.h>
 #include <arpa/inet.h>           // for inet_ntoa()
 #include <net/ethernet.h>
@@ -35,26 +46,7 @@
 #include <netinet/tcp.h>        //Provides declarations for tcp header
 #include <netinet/ip.h>         //Provides declarations for ip header
 
-/*
-   @author Gonzalo Gasca Meza
-   Oxford University
-   Department of Computer Science, Wolfson Building,  
-   Parks Rd, Oxford OX1, United Kingdom
-   +44 1865 273838
-   gonzalo.gasca.meza@cs.ox.ac.uk
-
-   Open packet capture using libpcap library in order to analyze:
-   - Analyze RTP streams in detail (packet loss, jitter, latency)
-   - Analyze RTCP traffic
-   - Analyze H.264 streams
-   - Analyze DTLS negotiation
-   - Analyze TIP  negotiation
-   - Convert RTP H.264 stream to video 
-   - Generate Report
-*/
-
-// tcpdump -qns 0 -X -r <filename.pcap>
-
+  
 //defines for the packet type code in an ETHERNET header
 
 #define ETHER_TYPE_IP (0x0800)
@@ -98,7 +90,7 @@ void print_icmp_packet(const u_char * , int );
 void print_rtp_packet(const u_char *, int);
 char* print_payload(u_int8_t);
 int dissect_rtp (const u_char * , int );
-void PrintData (const u_char * , int);
+void printData (const u_char * , int);
 
 
 FILE *logfile;
@@ -144,14 +136,15 @@ int main(int argc, char **argv) {
   //---------- Done with Main Packet Processing Loop --------------  
  
   //output some statistics about the whole trace 
-  printf("TCP : %d   UDP : %d   ICMP : %d   IGMP : %d   RTP: %d   Others : %d   Total : %d\n", tcp , udp , icmp , igmp , rtp, others , total);
+  printf("TCP : %d   UDP : %d   ICMP : %d   IGMP : %d   RTP: %d   Others : %d   Total : %d\n", tcp , udp , icmp , igmp , rtp, othe
+rs , total);
  
   return 0; //done
 
 } //end of main() function
 
 
-void PrintData (const u_char * data , int Size) {
+void printData (const u_char * data , int Size) {
 
     int i , j;
   
@@ -236,15 +229,15 @@ void print_icmp_packet(const u_char * Buffer , int Size)
     fprintf(logfile , "\n");
  
     fprintf(logfile , "IP Header\n");
-    PrintData(Buffer,iphdrlen);
+    printData(Buffer,iphdrlen);
          
     fprintf(logfile , "UDP Header\n");
-    PrintData(Buffer + iphdrlen , sizeof icmph);
+    printData(Buffer + iphdrlen , sizeof icmph);
          
     fprintf(logfile , "Data Payload\n");    
      
     //Move the pointer ahead and reduce the size of string
-    PrintData(Buffer + header_size , (Size - header_size) );
+    printData(Buffer + header_size , (Size - header_size) );
      
     fprintf(logfile , "\n###########################################################");
 }
@@ -287,13 +280,13 @@ void print_tcp_packet(const u_char * Buffer, int Size)
     fprintf(logfile , "\n");
          
     fprintf(logfile , "IP Header\n");
-    PrintData(Buffer,iphdrlen);
+    printData(Buffer,iphdrlen);
          
     fprintf(logfile , "TCP Header\n");
-    PrintData(Buffer + iphdrlen,tcph->doff*4);
+    printData(Buffer + iphdrlen,tcph->doff*4);
          
     fprintf(logfile , "Data Payload\n");    
-    PrintData(Buffer + header_size , Size - header_size );
+    printData(Buffer + header_size , Size - header_size );
                          
     fprintf(logfile , "\n###########################################################");
 }
@@ -328,16 +321,16 @@ void print_udp_packet(const u_char *Buffer , int Size) {
       fprintf(logfile , "\n");
       fprintf(logfile , "IP Header\n");
     
-      PrintData(Buffer , iphdrlen);
+      printData(Buffer , iphdrlen);
          
       fprintf(logfile , "UDP Header\n");
     
-      PrintData(Buffer + iphdrlen , sizeof udph);
+      printData(Buffer + iphdrlen , sizeof udph);
          
       fprintf(logfile , "Data Payload\n");    
      
       /*Move the pointer ahead and reduce the size of string*/
-      PrintData(Buffer + header_size , Size - header_size);
+      printData(Buffer + header_size , Size - header_size);
 
       fprintf(logfile , "\n###########################################################");
       ++udp;
@@ -534,16 +527,16 @@ udp[1] & 1 != 1 && udp[3] & 1 != 1 && udp[8] & 0x80 == 0x80 && length < 250
   fprintf(logfile , "\n");
   fprintf(logfile , "IP Header\n");
     
-  PrintData(Buffer , iphdrlen);
+  printData(Buffer , iphdrlen);
          
   fprintf(logfile , "UDP Header\n");
     
-  PrintData(Buffer + iphdrlen , sizeof udph);
+  printData(Buffer + iphdrlen , sizeof udph);
          
   fprintf(logfile , "Data Payload\n");    
      
   /*Move the pointer ahead and reduce the size of string*/
-  PrintData(Buffer + header_size , Size - header_size);
+  printData(Buffer + header_size , Size - header_size);
 
   fprintf(logfile , "\n###########################################################");
 
@@ -614,8 +607,10 @@ void print_ethernet_header(const u_char *Buffer, int Size)
      
   fprintf(logfile , "\n");
   fprintf(logfile , "Ethernet Header\n");
-  fprintf(logfile , "   |-Destination Address : %.2X-%.2X-%.2X-%.2X-%.2X-%.2X \n", eth->h_dest[0] , eth->h_dest[1] , eth->h_dest[2] , eth->h_dest[3] , eth->h_dest[4] , eth->h_dest[5] );
-  fprintf(logfile , "   |-Source Address      : %.2X-%.2X-%.2X-%.2X-%.2X-%.2X \n", eth->h_source[0] , eth->h_source[1] , eth->h_source[2] , eth->h_source[3] , eth->h_source[4] , eth->h_source[5] );
+  fprintf(logfile , "   |-Destination Address : %.2X-%.2X-%.2X-%.2X-%.2X-%.2X \n", eth->h_dest[0] , eth->h_dest[1] , eth->h_dest[2
+] , eth->h_dest[3] , eth->h_dest[4] , eth->h_dest[5] );
+  fprintf(logfile , "   |-Source Address      : %.2X-%.2X-%.2X-%.2X-%.2X-%.2X \n", eth->h_source[0] , eth->h_source[1] , eth->h_so
+urce[2] , eth->h_source[3] , eth->h_source[4] , eth->h_source[5] );
   fprintf(logfile , "   |-Protocol            : %u \n",(unsigned short)eth->h_proto);
 }
 

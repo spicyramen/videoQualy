@@ -1,2 +1,2 @@
 See the doc directory.
-
+sudo gcc -std=gnu99 qualy.c -o qualyapp -lpcap 
