@@ -1,2 +1,8 @@
-See the doc directory.
-sudo gcc -std=gnu99 qualy.c -o qualyapp -lpcap 
+Compile in Ubuntu 12.04LTS 
+sudo gcc -std=gnu99 qualy.c -o qualyapp -lpcap
+    
+Run
+./qualyapp filename.pcap
+
+Capture packets:
+tcpdump -qns 0 -X -r <filename.pcap>
